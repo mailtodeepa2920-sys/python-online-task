@@ -1,0 +1,127 @@
+#1.Total Bank Balance
+select sum(balance) as totalbankbalance from accounts order by totalbankbalance;
+
+#2.Get active account holders
+select c.CustomerID,c.FirstName,c.Email,a.Status,a.balance from customers c inner join accounts a on c.CustomerID = a.CustomerID where a.Status = 'Active';
+
+#3. Highest Transaction 
+select max(Amount) as highest_transaction from transactions;
+
+#4.Group by Account Type
+select AccountType,count(*) as account_count from accounts group by AccountType;
+
+#5. Account Balance greater than 50000
+select a.CustomerID,c.FirstName,sum(a.Balance) as totalbalance  from accounts as a inner join customers as c on a.CustomerID=c.CustomerID group by a.CustomerID having totalbalance > 50000;
+
+#6.Sort Account Balance from highest to lowerst
+
+select accountID,CustomerID,Balance from accounts order by Balanace DESC;
+
+#7.List Transaction order by transaction Date upto date.
+
+select * from transactions order by TransactionDate DESC;
+
+#8.Total balance and average balance 
+
+select sum(Balance) as Totalbalance,avg(Balance) as Total_Average_Balance from accounts;
+
+#9. Showing all customer with balance in the list using inner join
+
+select c.CustomerID, c.FirstName, c.LastName, a.AccountID, a.AccountType, a.Balance from Customers c  inner join Accounts a on c.CustomerID = a.CustomerID;
+
+#10. showing inactive accounts using Left Join
+select c.CustomerID, c.FirstName, c.LastName, c.Email from Customers c left join Accounts a on c.CustomerID = a.CustomerID where a.AccountID is null;
+
+#11. customer only open account for savings 
+
+select distinct c.CustomerID, c.FirstName, c.LastName,a.AccountType from Customers c join Accounts a on c.CustomerId = a.CustomerID where a.AccountType='Savings' and c.CustomerID not in(select CustomerID from Accounts where AccountType ='Checking');
+
+select CustomerID,Status,AccountType from Accounts where AccountType = 'Checking';
+
+#12. Select Idle Accounts 
+select a.AccountID, a.CustomerID, a.Balance from accounts a left join transactions t on a.AccountID = t.AccountID and t.TransactionDate >= now() - interval 90 Day where a.Balance > 1000 and a.Status ='Active' and t.TransactionID is null;
+
+#13. List All Customers
+select CustomerID, CONCAT(FirstName, ' ', LastName) AS FullName, Email from Customers;
+
+#14. Customer Created the account last 30 Days
+
+select * from Customers 
+where CreatedAt >= NOW() - interval 30 day;
+
+#15.count total number of suspended or inactive accounts
+select Status, COUNT(*) AS TotalAccounts from Accounts group by Status;
+
+#16 Highest Account Balance
+select CustomerID, Balance from Accounts order by Balance desc limit 0,1;
+
+#17.total balances held per status type
+select Status, SUM(Balance) AS TotalValue from Accounts group by Status;
+
+#18.Minimum , Maximum and Average Transaction Amounts
+select min(Amount) as smalltransction, max(Amount) as largetransaction, avg(Amount) as avgtransaction from Transactions;
+
+#19. join accounts with customers
+select a.AccountID, c.FirstName, c.LastName, a.AccountType, a.Balance from Accounts a join Customers c on a.CustomerID = c.CustomerID;
+
+#20. total Balance of all customers
+select c.CustomerID, c.FirstName, c.LastName, SUM(a.Balance) as TotaBalance from Customers c join Accounts a on c.CustomerID = a.CustomerID group by c.CustomerID, c.FirstName, c.LastName;
+
+#21.list cusotmer who have two accounts
+select c.CustomerID, c.FirstName, c.LastName, COUNT(a.AccountID) as AccountCount from Customers c join Accounts a on c.CustomerID = a.CustomerID
+group by c.CustomerID, c.FirstName, c.LastName
+having COUNT(a.AccountID) > 2;
+
+#22 select particular customer transaction by account id
+select * from Transactions where AccountID = 1011 order by TransactionDate desc;
+
+#23. AND Condition
+select AccountID, CustomerID, Balance, Status from Accounts where Status = 'Suspended' and Balance > 10000.00;
+
+#24. OR Condition
+select CustomerID, FirstName, LastName from Customers where Email is null or Email = '' or Email not like '%@%';
+
+#25. Between
+select * from Transactions where TransactionType = 'Withdrawal' and Amount between 1000.00 and 5000.00;
+
+#Sub Query
+#26 . Customer transaction more than 1500 
+select CustomerID, FirstName, LastName, Email from Customers where CustomerID in ( 
+    select distinct CustomerID
+    from Accounts 
+    where AccountID IN (
+        select AccountID from Transactions where Amount > 1500.00
+    )
+);
+
+#window function
+# 27. every single transaction by customer 
+select TransactionID,AccountID,TransactionDate,TransactionType,Amount,SUM(case when TransactionType = 'Deposit' then Amount else -Amount end) over(partition by AccountID order by TransactionDate) as RunningBalance from Transactions;
+
+#28. Highest and Lowest transaction using rank number 
+select AccountID,TransactionID,Amount,TransactionDate,rank() over(partition by AccountID order by Amount desc) as TransactionRank from Transactions;
+
+#Value Function
+#29. LAG and LEAD
+select AccountID,TransactionID,TransactionDate,lag(Amount) over (partition by AccountID order by TransactionDate) as Previous_Transaction_Amount,Amount as Current_Transaction_Amount,lead(Amount) over (partition by AccountID order by TransactionDate) as Next_Transaction_Amount from Transactions;
+
+#case
+# 30.User Define Function
+DELIMITER //
+
+CREATE FUNCTION GetAccountRiskLevel(balance DECIMAL(15,2)) 
+RETURNS VARCHAR(20)
+DETERMINISTIC
+BEGIN
+    DECLARE risk_level VARCHAR(20);
+    
+    IF balance < 0.00 THEN
+        SET risk_level = 'High Risk';
+    ELSEIF balance BETWEEN 0.00 AND 10000.00 THEN
+        SET risk_level = 'Standard';
+    ELSE
+        SET risk_level = 'Premium';
+    END IF;
+    
+    RETURN risk_level;
+END //
